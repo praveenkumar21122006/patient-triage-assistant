@@ -1,0 +1,89 @@
+<div class="max-w-6xl mx-auto px-4 py-6">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Triage dashboard</h1>
+      <p class="text-sm text-slate-500">Active queue of assessed encounters, most recent first.</p>
+    </div>
+    <a href="/intake/new" class="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded-lg">
+      + New intake
+    </a>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Total encounters</p>
+      <p class="text-2xl font-bold mt-1"><%= total %></p>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Today</p>
+      <p class="text-2xl font-bold mt-1"><%= today %></p>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Emergent or higher</p>
+      <p class="text-2xl font-bold mt-1 text-orange-600"><%= counts[1] + counts[2] %></p>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Non-urgent</p>
+      <p class="text-2xl font-bold mt-1 text-blue-600"><%= counts[5] %></p>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap gap-2 mb-5">
+    <a href="/" class="px-3 py-1.5 rounded-full text-sm border <%= !levelFilter ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300' %>">
+      All
+    </a>
+    <% [1, 2, 3, 4, 5].forEach((lvl) => {
+      const [bg, fg] = levelColors(lvl); %>
+      <a href="/?level=<%= lvl %>" class="px-3 py-1.5 rounded-full text-sm font-medium border <%= levelFilter === lvl ? 'ring-2 ring-offset-1' : 'hover:opacity-80' %>"
+         style="<%= levelFilter === lvl ? `background:${bg};color:${fg};border-color:${fg};` : `background:${bg};color:${fg};border-color:transparent;` %>">
+        <%= LEVELS[lvl].label %> (<%= counts[lvl] %>)
+      </a>
+    <% }) %>
+  </div>
+
+  <% if (intakes.length === 0) { %>
+    <div class="bg-white rounded-xl border border-dashed border-slate-300 p-10 text-center">
+      <p class="text-slate-500 mb-2"><%= levelFilter ? 'No encounters match this triage level yet.' : 'No encounters have been assessed yet.' %></p>
+      <a href="/intake/new" class="text-teal-600 font-medium text-sm hover:underline">Start the first intake →</a>
+    </div>
+  <% } else { %>
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+          <tr>
+            <th class="text-left px-4 py-3 font-medium">Triage</th>
+            <th class="text-left px-4 py-3 font-medium">Patient</th>
+            <th class="text-left px-4 py-3 font-medium">Chief complaint</th>
+            <th class="text-left px-4 py-3 font-medium">Category</th>
+            <th class="text-left px-4 py-3 font-medium">Pain</th>
+            <th class="text-left px-4 py-3 font-medium">Expected wait</th>
+            <th class="text-left px-4 py-3 font-medium">Assessed</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% intakes.forEach((row) => {
+            const [bg, fg] = levelColors(row.triage_level); %>
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-3">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" style="background:<%= bg %>;color:<%= fg %>;"
+                      title="<%= LEVELS[row.triage_level].label %>">
+                  <span class="w-2 h-2 rounded-full" style="background:<%= fg %>"></span>
+                  Level <%= row.triage_level %>
+                </span>
+              </td>
+              <td class="px-4 py-3">
+                <a href="/patients/<%= row.patient_id %>" class="font-medium text-slate-900 hover:text-teal-700"><%= row.patient_name %></a>
+                <div class="text-xs text-slate-500"><%= row.patient_age || '—' %> <%= row.patient_sex || '' %></div>
+              </td>
+              <td class="px-4 py-3 text-slate-700 max-w-[260px] truncate"><%= row.complaint %></td>
+              <td class="px-4 py-3 text-slate-500"><%= (CATEGORIES.find((c) => c.id === row.category) || {}).label || row.category %></td>
+              <td class="px-4 py-3 text-slate-600"><%= displayPain(row.pain_level) %></td>
+              <td class="px-4 py-3 text-slate-600"><%= row.wait_recommendation %></td>
+              <td class="px-4 py-3 text-slate-500 whitespace-nowrap"><%= timeAgo(row.assessed_at) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>

@@ -1,0 +1,26 @@
+{
+  "name": "patient-triage",
+  "version": "1.0.0",
+  "description": "Patient intake triage assistant - rule-based urgency assessment for walk-in clinics",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "express-ejs-layouts": "^2.5.1",
+    "sql.js": "^1.14.2"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0"
+  }
+}

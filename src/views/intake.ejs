@@ -1,0 +1,179 @@
+<div class="max-w-4xl mx-auto px-4 py-6">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold">New patient intake</h1>
+    <p class="text-sm text-slate-500">Capture presentation, vitals and history. Triage is computed automatically by rule.</p>
+  </div>
+
+  <% if (errors.length) { %>
+    <div class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+      <p class="text-sm font-semibold text-red-700 mb-1">Please fix these issues:</p>
+      <ul class="list-disc list-inside text-sm text-red-600">
+        <% errors.forEach((e) => { %><li><%= e %></li><% }) %>
+      </ul>
+    </div>
+  <% } %>
+
+  <form method="post" action="/intake" class="space-y-6">
+    <section class="bg-white rounded-xl border border-slate-200 p-5">
+      <h2 class="font-semibold text-slate-900 mb-4">1 · Patient</h2>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium text-slate-700 mb-1">Returning patient</label>
+          <select id="patient-select" name="patient_id" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+            <option value="new">New patient</option>
+            <% patients.forEach((p) => { %>
+              <option value="<%= p.id %>" <%= form.patientId === p.id ? 'selected' : '' %>>
+                <%= p.name %> · <%= p.age || '?' %> <%= p.sex || '' %>
+              </option>
+            <% }) %>
+          </select>
+        </div>
+        <div id="new-patient-fields" class="sm:col-span-2 grid sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Full name *</label>
+            <input type="text" name="name" value="<%= form.name || '' %>" placeholder="e.g. Jane Doe" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Age</label>
+            <input type="number" name="age" min="0" max="120" value="<%= form.age ?? '' %>" placeholder="years" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Sex</label>
+            <select name="sex" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+              <option value="">—</option>
+              <option value="male" <%= form.sex === 'male' ? 'selected' : '' %>>Male</option>
+              <option value="female" <%= form.sex === 'female' ? 'selected' : '' %>>Female</option>
+              <option value="other" <%= form.sex === 'other' ? 'selected' : '' %>>Other</option>
+            </select>
+          </div>
+          <div class="sm:col-span-3">
+            <label class="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+            <input type="text" name="phone" value="<%= form.phone || '' %>" placeholder="optional" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-xl border border-slate-200 p-5">
+      <h2 class="font-semibold text-slate-900 mb-4">2 · Chief complaint</h2>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Category *</label>
+          <select id="category-select" name="category" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+            <option value="">Select a category…</option>
+            <% CATEGORIES.forEach((c) => { %>
+              <option value="<%= c.id %>" <%= form.category === c.id ? 'selected' : '' %>><%= c.label %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Complaint / reason for visit *</label>
+          <input type="text" name="complaint" value="<%= form.complaint || '' %>" placeholder="e.g. Pain in lower right abdomen" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">How long has it been going on?</label>
+          <select name="duration" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+            <option value="">Unknown</option>
+            <% DURATION_OPTIONS.forEach((o) => { %>
+              <option value="<%= o.value %>" <%= String(form.durationHours) === o.value ? 'selected' : '' %>><%= o.label %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">
+            Pain level: <span id="pain-value" class="font-semibold text-teal-700"><%= form.painLevel ?? '—' %></span>/10
+          </label>
+          <input type="range" id="pain-range" name="pain" min="0" max="10" step="1" value="<%= form.painLevel ?? 0 %>" class="w-full accent-teal-600" />
+          <div class="flex justify-between text-[10px] text-slate-400"><span>None</span><span>Worst</span></div>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium text-slate-700 mb-1">Additional details <span class="text-slate-400">(free text — also scanned for life-threatening keywords)</span></label>
+          <textarea name="free_text" rows="3" placeholder="e.g. Started after dinner, sharp pain, feels worse when moving…" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"><%= form.freeText || '' %></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-xl border border-slate-200 p-5">
+      <h2 class="font-semibold text-slate-900 mb-1">3 · Red flags</h2>
+      <p class="text-xs text-slate-500 mb-3">Checking any box from the selected category escalates priority to Emergent (level 2).</p>
+      <div id="redflags" class="grid sm:grid-cols-2 gap-2">
+        <p class="text-sm text-slate-400 sm:col-span-2">Choose a complaint category to see relevant red flags.</p>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-xl border border-slate-200 p-5">
+      <h2 class="font-semibold text-slate-900 mb-4">4 · Vitals <span class="text-xs font-normal text-slate-400">(optional, leave blank if unavailable)</span></h2>
+      <% const v = form.vitals || {}; %>
+      <div class="grid grid-cols-3 lg:grid-cols-6 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Temp (°C)</label>
+          <input type="number" name="temp" step="0.1" min="30" max="43" value="<%= v.temp ?? '' %>" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">SpO₂ (%)</label>
+          <input type="number" name="spo2" min="50" max="100" value="<%= v.spo2 ?? '' %>" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Heart rate (bpm)</label>
+          <input type="number" name="hr" min="20" max="260" value="<%= v.hr ?? '' %>" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Resp rate (/min)</label>
+          <input type="number" name="rr" min="4" max="80" value="<%= v.rr ?? '' %>" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">BP systolic</label>
+          <input type="number" name="sbp" min="40" max="280" value="<%= v.sbp ?? '' %>" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">BP diastolic</label>
+          <input type="number" name="dbp" min="20" max="180" value="<%= v.dbp ?? '' %>" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-xl border border-slate-200 p-5">
+      <h2 class="font-semibold text-slate-900 mb-3">5 · Medical history</h2>
+      <p class="text-xs text-slate-500 mb-2">Relevant conditions (optional):</p>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
+        <% MEDICAL_CONDITIONS.forEach((c) => { %>
+          <label class="flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" name="conditions" value="<%= c.id %>" class="accent-teal-600" <%= (form.conditions || []).includes(c.id) ? 'checked' : '' %> />
+            <%= c.label %>
+          </label>
+        <% }) %>
+      </div>
+      <p class="text-xs text-slate-500 mb-2">Known allergies (optional):</p>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+        <% COMMON_ALLERGIES.forEach((a) => { %>
+          <label class="flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" name="allergies" value="<%= a %>" class="accent-teal-600" <%= (form.allergies || []).includes(a) ? 'checked' : '' %> />
+            <%= a %>
+          </label>
+        <% }) %>
+      </div>
+      <input type="text" name="other_allergy" placeholder="Other allergy…" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+      <div class="mt-4">
+        <label class="block text-sm font-medium text-slate-700 mb-1">Current medications</label>
+        <textarea name="medications" rows="2" placeholder="e.g. Metformin 500 mg twice daily" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"><%= form.medications || '' %></textarea>
+      </div>
+    </section>
+
+    <section id="preview" class="bg-slate-800 rounded-xl border border-slate-700 p-5 hidden">
+      <h2 class="font-semibold text-white mb-3">Live triage preview</h2>
+      <div class="flex items-center gap-3">
+        <span id="preview-chip" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold">—</span>
+        <span id="preview-wait" class="text-slate-300 text-sm"></span>
+      </div>
+      <ul id="preview-notes" class="mt-3 space-y-1 text-sm text-slate-300 list-disc list-inside"></ul>
+    </section>
+
+    <div class="flex items-center justify-between gap-4">
+      <p class="text-xs text-slate-400 max-w-md"><%= DISCLAIMER %></p>
+      <button type="submit" class="shrink-0 px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-lg">Assess and save intake</button>
+    </div>
+  </form>
+</div>
+
+<script id="triage-data" type="application/json"><%- JSON.stringify({ RED_FLAGS, LEVELS, selected: form.redFlags || [] }) %></script>
+<script src="/app.js"></script>

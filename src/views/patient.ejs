@@ -1,0 +1,148 @@
+<%
+  const primary = intakes.find((i) => i.id === highlightIntake) || intakes[0];
+  const primaryIndex = primary ? intakes.findIndex((i) => i.id === primary.id) : -1;
+  function vitalsLine(row) {
+    const v = row.vitals || {};
+    const parts = [];
+    if (v.temp != null) parts.push(`T ${v.temp}°C`);
+    if (v.spo2 != null) parts.push(`SpO₂ ${v.spo2}%`);
+    if (v.hr != null) parts.push(`HR ${v.hr}`);
+    if (v.rr != null) parts.push(`RR ${v.rr}`);
+    if (v.sbp != null) parts.push(`BP ${v.sbp}${v.dbp != null ? '/' + v.dbp : ''}`);
+    return parts.length ? parts.join(' · ') : 'No vitals recorded';
+  }
+%>
+<div class="max-w-4xl mx-auto px-4 py-6">
+  <div class="bg-white rounded-xl border border-slate-200 p-5 mb-6">
+    <div class="flex items-start justify-between gap-4 flex-wrap">
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-2xl font-bold"><%= patient.name %></h1>
+          <% if (intakes.some((i) => i.triage_level <= 2)) { %>
+            <span class="px-2 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">Needs priority</span>
+          <% } %>
+        </div>
+        <p class="text-sm text-slate-500 mt-1">
+          <%= patient.age || 'Age unknown' %> · <%= patient.sex || 'sex not recorded' %>
+          <% if (patient.phone) { %> · <%= patient.phone %><% } %>
+        </p>
+        <p class="text-xs text-slate-400 mt-1">Registered <%= formatDateTime(patient.created_at) %></p>
+      </div>
+      <a href="/intake/new?patient=<%= patient.id %>" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded-lg">+ New intake for this patient</a>
+    </div>
+  </div>
+
+  <% if (primary) {
+    const [bg, fg] = levelColors(primary.triage_level); %>
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden mb-8">
+      <div class="p-5 sm:p-6">
+        <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+          <div class="flex items-center gap-3">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold" style="background:<%= bg %>;color:<%= fg %>">
+              <span class="w-2.5 h-2.5 rounded-full" style="background:<%= fg %>"></span>
+              Level <%= primary.triage_level %> · <%= primary.triage_label %>
+            </span>
+          </div>
+          <span class="text-sm text-slate-500">Assessed <%= formatDateTime(primary.assessed_at) %> (<%= timeAgo(primary.assessed_at) %>)</span>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="rounded-lg border border-slate-200 p-4">
+            <h3 class="text-xs uppercase tracking-wide font-semibold text-slate-500 mb-2">Presentation</h3>
+            <p class="font-medium"><%= primary.complaint %></p>
+            <p class="text-xs text-slate-500 mt-1 mb-2"><%= (CATEGORIES.find((c) => c.id === primary.category) || {}).label || primary.category %>
+              <% if (primary.duration_hours != null) { %> · ~<%= primary.duration_hours %>h<% } %>
+              <% if (primary.pain_level != null) { %> · pain <%= displayPain(primary.pain_level) %><% } %></p>
+            <% if (primary.free_text) { %><p class="text-sm text-slate-600"><%= primary.free_text %></p><% } %>
+          </div>
+          <div class="rounded-lg border border-slate-200 p-4">
+            <h3 class="text-xs uppercase tracking-wide font-semibold text-slate-500 mb-2">Vitals</h3>
+            <p class="text-sm text-slate-700"><%= vitalsLine(primary) %></p>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <h3 class="text-xs uppercase tracking-wide font-semibold text-slate-500 mb-2">Expected wait</h3>
+          <p class="text-sm font-medium text-slate-800"><%= primary.wait_recommendation %></p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <h3 class="text-xs uppercase tracking-wide font-semibold text-slate-500 mb-2">Why this level</h3>
+            <% if (primary.reasons && primary.reasons.length) { %>
+              <ul class="space-y-1 text-sm text-slate-700">
+                <% primary.reasons.forEach((r) => { %>
+                  <li class="flex items-start gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style="background:<%= levelColors(r.level)[1] %>"></span>
+                    <span><%= r.text %></span>
+                  </li>
+                <% }) %>
+              </ul>
+            <% } else { %>
+              <p class="text-sm text-slate-400">No risk factors triggered; routine assessment.</p>
+            <% } %>
+          </div>
+          <div>
+            <h3 class="text-xs uppercase tracking-wide font-semibold text-slate-500 mb-2">Vital alerts</h3>
+            <% if (primary.vitals_flags && primary.vitals_flags.length) { %>
+              <ul class="space-y-1 text-sm text-slate-700 list-disc list-inside">
+                <% primary.vitals_flags.forEach((f) => { %><li><%= f %></li><% }) %>
+              </ul>
+            <% } else { %>
+              <p class="text-sm text-slate-400">None</p>
+            <% } %>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <h3 class="text-xs uppercase tracking-wide font-semibold text-slate-500 mb-2">Recommended actions</h3>
+          <% if (primary.recommendations && primary.recommendations.length) { %>
+            <ul class="space-y-1 text-sm text-slate-700 list-disc list-inside">
+              <% primary.recommendations.forEach((r) => { %><li><%= r %></li><% }) %>
+            </ul>
+          <% } else { %>
+            <p class="text-sm text-slate-400">Routine care.</p>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  <% } %>
+
+  <h2 class="font-semibold text-slate-900 mb-3">Visit history</h2>
+  <% if (intakes.length === 0) { %>
+    <div class="bg-white rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500 text-sm">
+      No visits recorded yet.
+    </div>
+  <% } else { %>
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+          <tr>
+            <th class="text-left px-4 py-3 font-medium">Triage</th>
+            <th class="text-left px-4 py-3 font-medium">Complaint</th>
+            <th class="text-left px-4 py-3 font-medium">Pain</th>
+            <th class="text-left px-4 py-3 font-medium">Vitals</th>
+            <th class="text-left px-4 py-3 font-medium">Assessed</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% intakes.forEach((row) => {
+            const [bg, fg] = levelColors(row.triage_level); %>
+            <tr class="hover:bg-slate-50 <%= row.id === primary.id ? 'bg-slate-50/70' : '' %>">
+              <td class="px-4 py-3">
+                <a href="/patients/<%= patient.id %>?intake=<%= row.id %>" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" style="background:<%= bg %>;color:<%= fg %>">
+                  <span class="w-2 h-2 rounded-full" style="background:<%= fg %>"></span>
+                  Level <%= row.triage_level %>
+                </a>
+              </td>
+              <td class="px-4 py-3 text-slate-700"><a href="/patients/<%= patient.id %>?intake=<%= row.id %>" class="hover:text-teal-700"><%= row.complaint %></a></td>
+              <td class="px-4 py-3 text-slate-600"><%= displayPain(row.pain_level) %></td>
+              <td class="px-4 py-3 text-slate-500 max-w-[220px] truncate"><%= vitalsLine(row) %></td>
+              <td class="px-4 py-3 text-slate-500 whitespace-nowrap"><%= timeAgo(row.assessed_at) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
